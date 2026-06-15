@@ -17,8 +17,16 @@ class peer:
         "peer_conn_try_count":0,
         "peer_conn_try_limit":3,
         "choked":False,
-        "next_begin":0
+        "next_begin":0,
+        "current_piece" : None
+
         }
+
+    def get_current_piece(self):
+        return self.peer_schema["current_piece"]
+
+    def set_current_piece(self,val):
+        self.peer_schema["current_piece"]=val
 
     def set_choked(self):
         self.peer_schema["choked"]=True
@@ -116,9 +124,9 @@ class Peers:
 
     def __init__(self,torrent):
         self.peers = {}
-        self.piece_downloaded = set()
-        self.piece_in_progress = set()
-        self.bitfield_length=torrent.tor_info.bitfield_length
+        self.piece_downloaded = torrent.dm.piece_downloaded
+        self.piece_in_progress = torrent.dm.piece_in_progress
+        self.bitfield_length=torrent.torrent_info.bitfield_length
         self.piece_availability = [0] * self.bitfield_length
 
     def get_piece_availability(self):
@@ -156,11 +164,15 @@ class Peers:
 
     def destroy_peer(self,peer_key ):
 
-            print(f"destroying peer {peer_key}")
+        print(f"destroying peer {peer_key}")
+        peer=self.peer(peer_key)
 
-            try:
-                self.peers[peer_key].close_writer()
-                del self.peers[peer_key]
+        if peer.get_current_piece() is not None:
+            self.piece_in_progress.discard(peer.get_current_piece())
 
-            except Exception as e:
-                print(f"error while destroying peer {peer_key}: {e}")
+        try:
+            self.peers[peer_key].close_writer()
+            del self.peers[peer_key]
+
+        except Exception as e:
+            print(f"error while destroying peer {peer_key}: {e}")

@@ -6,6 +6,7 @@ from core.client import client
 from download.download_manager import DownloadManager
 from torrent_lib.torrent_info import TorrentInfo
 from peer.peers import Peers
+from core.server import Server
 
 class Torrent:
 
@@ -19,10 +20,18 @@ class Torrent:
 
         self.peers=Peers(self)
 
+        self.server=Server(self)
+
     def run_torrent(self):
+
         async def main():
-            await client(self)
-            # await asyncio.gather(client(self), server(self))
+
+            client_task = asyncio.create_task(client(self))
+            server_task = asyncio.create_task(self.server.main())
+
+            await client_task  # download finishes
+                # server keeps running → you're now seeding
+            await server_task
 
         asyncio.run(main())
 

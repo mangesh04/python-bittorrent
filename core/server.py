@@ -1,15 +1,14 @@
 import asyncio
-
+from peer.message_handler import handle
 
 
 class Server:
-    def __init__(self,mh):
+    def __init__(self,torrent):
         self.host = "localhost"
         self.port = 8888
-        self.mh=mh
+        self.torrent=torrent
 
     async def on_client_connect(self,reader, writer):
-        self.mh.add_peer(reader, writer, "server")
 
         addr = writer.get_extra_info("peername")
 
@@ -18,17 +17,12 @@ class Server:
 
         peer_key = (ip, port)
 
-        self.mh.peers[peer_key] = {
-        "peer_id": None,
-        "ip": ip,
-        "port": port,
-        "connection_side": "client"
-        }
+        self.torrent.peers.add_peer(peer_key)
 
-        self.mh.peers[peer_key]["reader"] = reader
-        self.mh.peers[peer_key]["writer"] = writer
+        self.torrent.peer.set_reader(reader)
+        self.torrent.peer.set_writer(writer)
 
-        self.mh.handle(peer_key)
+        asyncio.create_task(handle(self.torrent, peer_key))
 
     async def main(self):
         server = await asyncio.start_server(self.on_client_connect,self.host,self.port)

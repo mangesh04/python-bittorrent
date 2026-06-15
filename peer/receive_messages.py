@@ -6,7 +6,9 @@ from constants.message_id import message_id
 import struct
 import asyncio
 
-async def receive_messages(peer):
+async def receive_messages(torrent,peer_key):
+
+    peer=torrent.peers.peer(peer_key)
 
     reader=peer.get_reader()
 
@@ -16,6 +18,12 @@ async def receive_messages(peer):
     print(f"message receiver started for some peer")
 
     while True:
+
+        if torrent.dm.total_file_downloaded:
+            recv_msg["length"] = -1
+            recv_msg_queue.put_nowait(dict(recv_msg))
+            break
+
 
         recv_msg = dict()
 
@@ -50,12 +58,14 @@ async def receive_messages(peer):
                 await writer.drain()
                 continue  # keep looping, don't increment try count
             else:
+
                 # not choked but timed out — peer is dead
                 peer.set_try_count(peer.get_try_count() + 1)
                 if peer.get_try_count() >= peer.get_try_count_lim():
                     recv_msg["length"] = -1
                     recv_msg_queue.put_nowait(dict(recv_msg))
                     break
+
         except (asyncio.IncompleteReadError, ConnectionResetError):
             recv_msg["length"] = -1
             recv_msg_queue.put_nowait(dict(recv_msg))

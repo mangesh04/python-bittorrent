@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
                 self.info.update(self.torrent.torrent_info.decoded_tf)
 
         except Exception as e:
-            print("something wrong with file",{e})
+            print("something wrong with torrent file info class",{e})
 
 
     def start(self):

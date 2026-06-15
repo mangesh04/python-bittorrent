@@ -15,7 +15,7 @@ async def handle(torrent, peer_key):
     peer=torrent.peers.get_peer(peer_key)
 
     try:
-        await asyncio.gather(receive_messages(peer),process_recv_msgs(torrent,peer_key))
+        await asyncio.gather(receive_messages(torrent,peer_key),process_recv_msgs(torrent,peer_key))
     except Exception as e:
         import traceback
         traceback.print_exc()  # instead of just print(e)

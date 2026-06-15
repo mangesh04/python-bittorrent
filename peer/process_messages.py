@@ -78,32 +78,38 @@ async def process_recv_msgs(torrent,peer_key):
 
             buff=dm.buffers[piece_index]
 
-            buff.add_block(begin=piece_begin, block_data=piece_block)
+            dm.add_block(piece_index,begin=piece_begin, block_data=piece_block)
 
-            print("added in buff")
+            print("addblock out in process added in buff")
 
             if buff.complete and not buff.verified:
                 peers.piece_in_progress.discard(piece_index)
+                peer.set_current_piece(None)
                 raise Exception
 
             if buff.complete and buff.verified:
-
+                print("completed and varified in process")
                 peers.piece_in_progress.discard(piece_index)
-                peers.piece_downloaded.add(piece_index)
+                peer.set_current_piece(None)
+
+
                 print("is problem here before sending have message")
                 await send_have_message(peers,piece_index)
 
                 print("piece completed looking for new piece")
                 #next rare piece
-                rare_piece_index,offset=peer.get_target_piece_info()
-
+                rare_piece_index=peer.get_target_piece_info()
+                print("rare piece index in process",rare_piece_index)
                 if rare_piece_index == None:
                     continue
                 else:
                     piece_index=rare_piece_index
 
-                print("in piece rare_piece_index",rare_piece_index)
+                print("getting new rare_piece_index",rare_piece_index)
+
                 peers.piece_in_progress.add(rare_piece_index)
+                peer.set_current_piece(rare_piece_index)
+
                 print("inflight requests",peer.get_inflight_requests())
 
             #we are asking multiple chucks(5) in one functioin call
@@ -130,13 +136,16 @@ async def process_recv_msgs(torrent,peer_key):
             if stat.download_connections>=stat.download_connections_limit:
                 continue
 
-            rare_piece_index,offset=peer.get_target_piece_info()
+            rare_piece_index=peer.get_target_piece_info()
 
             if rare_piece_index == None:
                 continue
 
+            stat.download_connections+=1
+
             print("unchoked rare_piece_index",rare_piece_index)
             peers.piece_in_progress.add(rare_piece_index)
+            peer.set_current_piece(rare_piece_index)
 
 
             is_complete,next_begin,inflight= await request_next_blocks(writer, rare_piece_index, 0, piece_length,file_size)
